@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>UNIX時間・ユリウス日 マルチデバイス対応表示</title>
+  <title>UNIX時間・ユリウス日 4タイムゾーン表示</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- TailwindCSS CDN -->
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -41,6 +41,8 @@
       background-color: #f8fafc;
       color: #374151;
       transition: background .2s,color .2s;
+      max-width: 100%;
+      text-overflow: ellipsis;
     }
     .dark .tz-container select {
       background-color: #18181b;
@@ -50,16 +52,18 @@
     .tz-container option {
       background-color: #fff;
       color: #22223b;
+      white-space: normal;
+      word-wrap: break-word;
     }
     .dark .tz-container option {
       background-color: #23272f;
       color: #f3f4f6;
     }
     /* Responsive: widen grid for PC, stack for mobile */
-    @media (min-width: 801px) {
-      .tz-contain-wrap { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    @media (min-width: 1000px) {
+      .tz-contain-wrap { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
-    @media (max-width: 800px) and (min-width: 641px){
+    @media (min-width: 641px) and (max-width: 999px) {
       .tz-contain-wrap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 640px) {
@@ -67,27 +71,46 @@
     }
     /* block label font for Julian row */
     .julian-label { min-width: 8rem; display: inline-block; }
+    
+    /* タイムゾーンラベル用 - 長い名前を適切に表示 */
+    #tzLabel {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      display: block;
+    }
+    
+    /* スマホ表示の最適化 */
+    @media (max-width: 480px) {
+      .micro-switch-label { font-size: 10px; }
+      h1 { font-size: 1.25rem !important; }
+      .tz-container select {
+        font-size: 0.875rem;
+        padding: 0.2rem 1.6rem 0.2rem 0.4rem;
+      }
+    }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen transition-colors duration-200" id="bodyRoot">
-  <div class="max-w-3xl mx-auto p-4 my-6 bg-white rounded-lg shadow-lg">
+  <div class="max-w-7xl mx-auto p-4 my-6 bg-white rounded-lg shadow-lg">
     <h1 class="text-2xl md:text-3xl text-indigo-700 font-bold mb-2 flex items-center space-x-2">
       <i class="fa-solid fa-clock"></i>
-      <span>UNIX時間・ユリウス日 マルチタイムゾーン表示</span>
+      <span>UNIX時間・ユリウス日 4タイムゾーン表示</span>
     </h1>
     <p class="text-gray-700 mb-4">
-      UNIXタイムスタンプ（エポック秒）、ユリウス日を含む現在時刻情報をリアルタイム表示します。マイクロ秒/ミリ秒切り替え、ダーク/ライトモード、PC・タブレット・スマホ判別による自動レイアウト調整が可能です。JST・UTCに加えもう1つ任意タイムゾーンも表示できます。
+      UNIXタイムスタンプ（エポック秒）、ユリウス日を含む現在時刻情報をリアルタイム表示します。マイクロ秒/ミリ秒切り替え、ダーク/ライトモード、PC・タブレット・スマホ判別による自動レイアウト調整が可能です。JST・UTC・GMT・カスタムタイムゾーンの4つのタイムゾーンを同時表示します。
     </p>
     <!-- 設定 -->
     <div class="flex flex-wrap md:flex-nowrap items-center mb-6 space-x-2 space-y-2 md:space-y-0">
       <label class="flex items-center cursor-pointer">
-        <span class="text-gray-700 text-xs mr-2">ミリ秒</span>
+        <span class="text-gray-700 text-xs mr-2 micro-switch-label">ミリ秒</span>
         <div class="relative">
           <input type="checkbox" id="microSwitch" class="sr-only">
           <div class="w-14 h-7 bg-gray-300 rounded-full shadow-inner slider transition-all duration-150"></div>
           <div class="dot absolute w-6 h-6 bg-white rounded-full border border-gray-300 top-0.5 left-1 transition transform" id="switchDot"></div>
         </div>
-        <span class="ml-2 text-gray-700 text-xs">マイクロ秒</span>
+        <span class="ml-2 text-gray-700 text-xs micro-switch-label">マイクロ秒</span>
       </label>
       <!-- Appearance Mode Controls -->
       <span class="mx-4"></span>
@@ -137,9 +160,24 @@
           <div class="text-base font-mono text-gray-800 mb-1" id="fullTimeUTC"></div>
         </div>
       </div>
+      <!-- GMT -->
+      <div>
+        <div class="flex items-center space-x-2 mb-2">
+          <i class="fa-solid fa-earth-europe text-blue-500"></i>
+          <h2 class="text-lg font-semibold text-blue-800">グリニッジ標準時（GMT）</h2>
+        </div>
+        <div class="bg-gray-50 rounded p-4">
+          <div class="mb-1 text-gray-500 text-sm">UNIXタイムスタンプ:</div>
+          <div class="text-xl font-mono text-gray-800 mb-3" id="unixTimestampGMT"></div>
+          <div class="mb-1 text-gray-500 text-sm">ユリウス日 (Julian Day/秒):</div>
+          <div class="text-base font-mono text-yellow-900 mb-3" id="julianGMT"></div>
+          <div class="mb-1 text-gray-500 text-sm">年月日時分秒</div>
+          <div class="text-base font-mono text-gray-800 mb-1" id="fullTimeGMT"></div>
+        </div>
+      </div>
       <!-- Custom TZ -->
       <div class="tz-container">
-        <div class="flex items-center space-x-2 mb-2">
+        <div class="mb-2">
           <i class="fa-solid fa-globe text-yellow-500"></i>
           <h2 class="text-lg font-semibold text-yellow-700" id="tzLabel">タイムゾーン選択</h2>
         </div>
@@ -192,6 +230,9 @@
     const unixTimestampUTC = document.getElementById('unixTimestampUTC');
     const fullTimeUTC = document.getElementById('fullTimeUTC');
     const julianUTC = document.getElementById('julianUTC');
+    const unixTimestampGMT = document.getElementById('unixTimestampGMT');
+    const fullTimeGMT = document.getElementById('fullTimeGMT');
+    const julianGMT = document.getElementById('julianGMT');
     const unixTimestampCustom = document.getElementById('unixTimestampCustom');
     const fullTimeCustom = document.getElementById('fullTimeCustom');
     const julianCustom = document.getElementById('julianCustom');
@@ -333,6 +374,11 @@
         fullTimeUTC.textContent = `${now.getUTCFullYear()}-${pad(now.getUTCMonth()+1,2)}-${pad(now.getUTCDate(),2)} ${pad(now.getUTCHours(),2)}:${pad(now.getUTCMinutes(),2)}:${pad(now.getUTCSeconds(),2)}.${pad(ms,3)}`;
       }
       julianUTC.textContent = calcJulian(unixUtcNum, useMicro);
+      
+      // GMT (Europe/London)
+      unixTimestampGMT.textContent = getUnixTz(now, 'Europe/London', useMicro);
+      fullTimeGMT.textContent = formatFullTz(now, "Europe/London", useMicro);
+      julianGMT.textContent = calcJulian(getUnixNumber(now, "Europe/London", useMicro), useMicro);
 
       // Custom
       let tz = timezoneSelect.value;
@@ -442,13 +488,5 @@
     window.addEventListener('resize', adjustLayoutForDevice);
     window.addEventListener('DOMContentLoaded', adjustLayoutForDevice);
   </script>
-  <script id="html_badge_script1">
-      window.__genspark_remove_badge_link = "https://www.genspark.ai/api/html_badge/" +
-          "remove_badge?token=To%2FBnjzloZ3UfQdcSaYfDmMNWtFXIJ%2B0P1r0wGJmF4VZJbwKRX7YXCwPx5vQ8M38qsCTU0YUlMZQChtsR39tm%2FdC%2F9C5eMUDBD67Ng3tvg8shJCcfySjk5XsLKglOOBzLEZllT%2F1skSXbAvd3Ugf57ogJZM0IiqPmitSDtNUD9qAslTJs6ZDNl5vQgn0Zbj%2Bessl7tbMWsHZA34O4eVtnlPiXz16sjmWFcI%2FYZd%2BbSAkNmcyVLVSmxAMUY3ggimtQ3hulieaTgRapQD6MtSfdT1D3H0rJyW6GaP5DN1iHwOt1wGbWSx9nouVgQyKYegB%2B%2Btlgxzhj77wIgRdFD48XmI2O7MDNk1lCsiuXZ%2Bk%2B7WdVlWPZIVDQD9AqozBShD7wjR2tiOtz%2FjXpvtv%2FI320W06EQPA0dgBxqjckcwEsYfdtBmFu2%2FnMwxdrDhXQ6JzNNaN6jqfqQTmcaYi%2FC1ZsfUeg9dmudcVT2M370OG4GJlIubJIZXjHWsCVnCcqL6yVLOq4MY2PD%2BeVkjAjLnG0Q%3D%3D";
-      window.__genspark_locale = "ja-JP";
-      window.__genspark_token = "To/BnjzloZ3UfQdcSaYfDmMNWtFXIJ+0P1r0wGJmF4VZJbwKRX7YXCwPx5vQ8M38qsCTU0YUlMZQChtsR39tm/dC/9C5eMUDBD67Ng3tvg8shJCcfySjk5XsLKglOOBzLEZllT/1skSXbAvd3Ugf57ogJZM0IiqPmitSDtNUD9qAslTJs6ZDNl5vQgn0Zbj+essl7tbMWsHZA34O4eVtnlPiXz16sjmWFcI/YZd+bSAkNmcyVLVSmxAMUY3ggimtQ3hulieaTgRapQD6MtSfdT1D3H0rJyW6GaP5DN1iHwOt1wGbWSx9nouVgQyKYegB++tlgxzhj77wIgRdFD48XmI2O7MDNk1lCsiuXZ+k+7WdVlWPZIVDQD9AqozBShD7wjR2tiOtz/jXpvtv/I320W06EQPA0dgBxqjckcwEsYfdtBmFu2/nMwxdrDhXQ6JzNNaN6jqfqQTmcaYi/C1ZsfUeg9dmudcVT2M370OG4GJlIubJIZXjHWsCVnCcqL6yVLOq4MY2PD+eVkjAjLnG0Q==";
-  </script>
-  <script id="html_badge_script2" src="https://www.genspark.ai/html_badge.js"></script>
 </body>
 </html>
-
